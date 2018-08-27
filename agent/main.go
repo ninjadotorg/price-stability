@@ -21,10 +21,10 @@ type RPCError struct {
 	Message string `json:"message"`
 }
 
-type RPCNumberResponse struct {
+type RPCNumOfCoinsAndBondsResponse struct {
 	Id int `json:"id"`
 	RPCError *RPCError `json:"error"`
-	Result float64 `json:"result"`
+	Result map[string]float64 `json:"result"`
 }
 
 type RPCHashResponse struct {
@@ -33,12 +33,12 @@ type RPCHashResponse struct {
 	Result string `json:"result"`
 }
 
-func getResultAsNumber(
+func getNumOfCoinsAndBonds(
 	client *HttpClient,
 	method string,
-	result *float64,
+	result *map[string]float64,
 ) (error) {
-	var rpcResponse = &RPCNumberResponse{}
+	var rpcResponse = &RPCNumOfCoinsAndBondsResponse{}
 	err := client.RPCCall(method, nil, rpcResponse)
 	if err != nil {
 		return err
@@ -46,6 +46,7 @@ func getResultAsNumber(
 	if rpcResponse.RPCError != nil {
 		return fmt.Errorf("%s", rpcResponse.RPCError.Message)
 	}
+	fmt.Println("haha: ", rpcResponse.Result)
 	*result = rpcResponse.Result
 	return nil
 }
@@ -75,19 +76,13 @@ func process(
 	eligibleAgentIDs := []string{"agent_1", "agent_2", "agent_3"}
 
 	client := NewHttpClient()
-	var numOfCoins float64
-	err := getResultAsNumber(client, "getNumberOfCoins", &numOfCoins)
+	var coinsAndBondsMap map[string]float64
+	err := getNumOfCoinsAndBonds(client, "getNumberOfCoinsAndBonds", &coinsAndBondsMap)
 	if err != nil {
 		return err
 	}
-	fmt.Println("numOfCoins: ", numOfCoins)
-
-	var numOfBonds float64
-	err = getResultAsNumber(client, "getNumberOfBonds", &numOfBonds)
-	if err != nil {
-		return err
-	}
-	fmt.Println("numOfBonds: ", numOfBonds)
+	numOfCoins := coinsAndBondsMap[TX_OUT_COIN_TYPE]
+	numOfBonds := coinsAndBondsMap[TX_OUT_BOND_TYPE]
 
 	// TODO: get exchange rate from external exchange
 	exchangeRate := 0.65
