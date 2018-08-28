@@ -1,14 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
-	"fmt"
-	"time"
 	"runtime"
 	"strconv"
-	// "math"
+	"syscall"
+	"time"
 )
 
 const (
@@ -16,27 +15,27 @@ const (
 )
 
 type RPCError struct {
-	Code int `json:"code"`
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
 type RPCNumOfCoinsAndBondsResponse struct {
-	Id int `json:"id"`
-	RPCError *RPCError `json:"error"`
-	Result map[string]float64 `json:"result"`
+	Id       int                `json:"id"`
+	RPCError *RPCError          `json:"error"`
+	Result   map[string]float64 `json:"result"`
 }
 
 type RPCHashResponse struct {
-	Id int `json:"id"`
+	Id       int       `json:"id"`
 	RPCError *RPCError `json:"error"`
-	Result string `json:"result"`
+	Result   string    `json:"result"`
 }
 
 func getNumOfCoinsAndBonds(
 	client *HttpClient,
 	method string,
 	result *map[string]float64,
-) (error) {
+) error {
 	var rpcResponse = &RPCNumOfCoinsAndBondsResponse{}
 	err := client.RPCCall(method, nil, rpcResponse)
 	if err != nil {
@@ -53,7 +52,7 @@ func sendActionParamToBlockchainNode(
 	client *HttpClient,
 	method string,
 	param map[string]interface{},
-) (error) {
+) error {
 	var rpcResponse = &RPCHashResponse{}
 	err := client.RPCCall(method, []interface{}{param}, rpcResponse)
 	if err != nil {
@@ -64,7 +63,6 @@ func sendActionParamToBlockchainNode(
 	}
 	return nil
 }
-
 
 func process(
 	issuingCoinsRuledRanges []*IssuingCoinsRuledRangeItem,
@@ -111,11 +109,11 @@ func process(
 		}
 		// make api call to add action param transaction via RPC
 		param := map[string]interface{}{
-			"agentId": getenv("AGENT_PUBLIC_KEY", "agent_1"),
-			"agentSig": "", // sig here
-			"numOfCoins": actualIssuingCoins,
-			"numOfBonds": 0, // TODO: re-calculate this value
-			"tax": 0,
+			"agentId":          getenv("AGENT_PUBLIC_KEY", "agent_1"),
+			"agentSig":         "", // sig here
+			"numOfCoins":       actualIssuingCoins,
+			"numOfBonds":       0,
+			"tax":              0,
 			"eligibleAgentIDs": eligibleAgentIDs,
 		}
 		return sendActionParamToBlockchainNode(client, "createActionParamsTrasaction", param)
@@ -127,11 +125,11 @@ func process(
 		contractingCoinsRuledRanges,
 	)
 	param := map[string]interface{}{
-		"agentId": getenv("AGENT_PUBLIC_KEY", "agent_1"),
-		"agentSig": "", // sig here
-		"numOfCoins": 0, // TODO: re-calculate this value
-		"numOfBonds": contractingCoinsRuledRangeItem.NumOfMiningBonds,
-		"tax": contractingCoinsRuledRangeItem.Tax,
+		"agentId":          getenv("AGENT_PUBLIC_KEY", "agent_1"),
+		"agentSig":         "", // sig here
+		"numOfCoins":       0,
+		"numOfBonds":       contractingCoinsRuledRangeItem.NumOfMiningBonds,
+		"tax":              contractingCoinsRuledRangeItem.Tax,
 		"eligibleAgentIDs": eligibleAgentIDs,
 	}
 
@@ -158,7 +156,7 @@ func run() {
 func clearUpBeforeTerminating() {
 	// TODO: do cleaning up here, probably send message to a channel in run func to stop loops
 	fmt.Println("Wait for 2 seconds to finish processing")
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 }
 
 func main() {
