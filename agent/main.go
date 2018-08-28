@@ -13,7 +13,6 @@ import (
 
 const (
 	AVERAGE_MINED_BLOCK_IN_SEC = 60 // 1 min
-
 )
 
 type RPCError struct {
@@ -46,7 +45,6 @@ func getNumOfCoinsAndBonds(
 	if rpcResponse.RPCError != nil {
 		return fmt.Errorf("%s", rpcResponse.RPCError.Message)
 	}
-	fmt.Println("haha: ", rpcResponse.Result)
 	*result = rpcResponse.Result
 	return nil
 }
@@ -85,7 +83,7 @@ func process(
 	numOfBonds := coinsAndBondsMap[TX_OUT_BOND_TYPE]
 
 	// TODO: get exchange rate from external exchange
-	exchangeRate := 0.65
+	exchangeRate := 1.25
 	fmt.Println("exchangeRate: ", exchangeRate)
 
 	demand := exchangeRate * numOfCoins
@@ -122,6 +120,7 @@ func process(
 		}
 		return sendActionParamToBlockchainNode(client, "createActionParamsTrasaction", param)
 	}
+
 	// price < peg
 	contractingCoinsRuledRangeItem := getContractingCoinsRuledRangeItem(
 		exchangeRate,
@@ -135,33 +134,6 @@ func process(
 		"tax": contractingCoinsRuledRangeItem.Tax,
 		"eligibleAgentIDs": eligibleAgentIDs,
 	}
-
-	// Hardcoded for demo
-	// Agent 1
-
-	// numCoins, _ := strconv.Atoi(getenv("NUM_COINS_FAKE", "120"))
-	// param := map[string]interface{}{
-	// 	"agentId": getenv("AGENT_PUBLIC_KEY", "agent_123456789"),
-	// 	"numOfIssuingCoins": numCoins, // TODO: re-calculate this value
-	// 	"numOfIssuingBonds": 0,
-	// 	"tax": 0,
-	// }
-
-	// // Agent 2
-	// param := map[string]interface{}{
-	// 	"agentId": getenv("AGENT_PUBLIC_KEY", "agent_123456789"),
-	// 	"numOfIssuingCoins": 130, // TODO: re-calculate this value
-	// 	"numOfIssuingBonds": 0
-	// 	"tax": 0,
-	// }
-
-	// // Agent 3
-	// param := map[string]interface{}{
-	// 	"agentId": getenv("AGENT_PUBLIC_KEY", "agent_123456789"),
-	// 	"numOfIssuingCoins": 140, // TODO: re-calculate this value
-	// 	"numOfIssuingBonds": 0
-	// 	"tax": 0,
-	// }
 
 	return sendActionParamToBlockchainNode(client, "createActionParamsTrasaction", param)
 }
