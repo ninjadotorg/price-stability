@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -8,10 +10,16 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 )
 
 const (
 	AVERAGE_MINED_BLOCK_IN_SEC = 60 // 1 min
+
+	// these agent public keys should be pulled from agent management api
+	AGENT1_PUBLIC_KEY_BASE64_ENCODED = "JtzdWgdm02rielHS5U9ZrdrJqj5Q9VhfmrfB/2X7POw="
+	AGENT2_PUBLIC_KEY_BASE64_ENCODED = "Dzg9zPjznK69frGlWSiRN+9cD/Rwx1jr7tsAahDWxoY="
 )
 
 type RPCError struct {
@@ -64,12 +72,25 @@ func sendActionParamToBlockchainNode(
 	return nil
 }
 
+func sign(message []byte) string {
+	// public, private, _ := ed25519.GenerateKey(nil)
+	// fmt.Println("public: ", (public))
+	// fmt.Println("private: ", (private))
+
+	privKeyStr := getenv("PRIVATE_KEY_BASE64_ENCODED", "")
+	privKeyInBytes, _ := base64.StdEncoding.DecodeString(privKeyStr)
+
+	signature := ed25519.Sign(privKeyInBytes, message)
+	sigStr := base64.StdEncoding.EncodeToString(signature)
+	return sigStr
+}
+
 func process(
 	issuingCoinsRuledRanges []*IssuingCoinsRuledRangeItem,
 	contractingCoinsRuledRanges []*ContractingCoinsRuledRangeItem,
 ) error {
 	// hardcoded eligibleAgentIDs here
-	eligibleAgentIDs := []string{"agent_1", "agent_2", "agent_3"}
+	eligibleAgentIDs := []string{AGENT1_PUBLIC_KEY_BASE64_ENCODED}
 
 	client := NewHttpClient()
 	var coinsAndBondsMap map[string]float64
@@ -109,13 +130,14 @@ func process(
 		}
 		// make api call to add action param transaction via RPC
 		param := map[string]interface{}{
-			"agentId":          getenv("AGENT_PUBLIC_KEY", "agent_1"),
-			"agentSig":         "", // sig here
+			"agentId":          getenv("PUBLIC_KEY_BASE64_ENCODED", ""),
 			"numOfCoins":       actualIssuingCoins,
 			"numOfBonds":       0,
 			"tax":              0,
 			"eligibleAgentIDs": eligibleAgentIDs,
 		}
+		messageInBytes, _ := json.Marshal(param)
+		param["agentSig"] = sign(messageInBytes)
 		return sendActionParamToBlockchainNode(client, "createActionParamsTrasaction", param)
 	}
 
@@ -125,20 +147,20 @@ func process(
 		contractingCoinsRuledRanges,
 	)
 	param := map[string]interface{}{
-		"agentId":          getenv("AGENT_PUBLIC_KEY", "agent_1"),
-		"agentSig":         "", // sig here
+		"agentId":          getenv("PUBLIC_KEY_BASE64_ENCODED", ""),
 		"numOfCoins":       0,
 		"numOfBonds":       contractingCoinsRuledRangeItem.NumOfMiningBonds,
 		"tax":              contractingCoinsRuledRangeItem.Tax,
 		"eligibleAgentIDs": eligibleAgentIDs,
 	}
-
+	messageInBytes, _ := json.Marshal(param)
+	param["agentSig"] = sign(messageInBytes)
 	return sendActionParamToBlockchainNode(client, "createActionParamsTrasaction", param)
 }
 
 func run() {
 	// Agent re-calculates every 60s
-	deplayTimeInSec, _ := strconv.Atoi(getenv("DELAY_TIME_IN_SEC", "60"))
+	deplayTimeInSec, _ := strconv.Atoi(getenv("DELAY_TIME_IN_SEC", "600"))
 	issuingCoinsRuledRanges := initIssuingCoinsRuledRanges()
 	contractingCoinsRuledRanges := initContractingCoinsRuledRanges()
 	for {
